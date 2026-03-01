@@ -220,7 +220,7 @@ export function DailyProduction() {
             {/* Wig Types - 2x2 Grid with +/- buttons */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-gray-700">Wig Type & Quantity</Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {/* Frontal */}
                 <div className="bg-gradient-to-br from-violet-50 to-purple-50 p-4 rounded-2xl border-2 border-violet-100">
                   <p className="text-center font-semibold text-gray-800 mb-3">Frontal</p>
@@ -274,46 +274,6 @@ export function DailyProduction() {
                     >
                       +
                     </button>
-                  </div>
-                </div>
-
-                {/* Full Lace */}
-                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-2xl border-2 border-purple-100">
-                  <p className="text-center font-semibold text-gray-800 mb-3">Full Lace</p>
-                  <div className="flex items-center justify-center gap-4 opacity-50">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 text-gray-400 font-bold text-xl flex items-center justify-center">
-                      −
-                    </div>
-                    <Input
-                      type="number"
-                      min="0"
-                      value="0"
-                      disabled
-                      className="h-14 w-20 text-center text-xl font-bold border-2 border-gray-200 rounded-xl bg-gray-100"
-                    />
-                    <div className="w-12 h-12 rounded-full bg-gray-300 text-gray-500 font-bold text-xl flex items-center justify-center">
-                      +
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bob Wig */}
-                <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-4 rounded-2xl border-2 border-pink-100">
-                  <p className="text-center font-semibold text-gray-800 mb-3">Bob Wig</p>
-                  <div className="flex items-center justify-center gap-4 opacity-50">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 text-gray-400 font-bold text-xl flex items-center justify-center">
-                      −
-                    </div>
-                    <Input
-                      type="number"
-                      min="0"
-                      value="0"
-                      disabled
-                      className="h-14 w-20 text-center text-xl font-bold border-2 border-gray-200 rounded-xl bg-gray-100"
-                    />
-                    <div className="w-12 h-12 rounded-full bg-gray-300 text-gray-500 font-bold text-xl flex items-center justify-center">
-                      +
-                    </div>
                   </div>
                 </div>
               </div>
