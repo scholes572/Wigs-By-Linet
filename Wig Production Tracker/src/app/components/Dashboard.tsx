@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { TrendingUp, Users, Package, DollarSign, Award, Calendar } from 'lucide-react';
+import { TrendingUp, Users, Package, DollarSign, Award, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { getWorkerDisplayName } from '../../hooks/useWorkers';
 
 interface Worker {
   id: string;
@@ -42,12 +43,27 @@ export function Dashboard() {
   const [recentPayments, setRecentPayments] = useState<PaymentRecord[]>([]);
   const [topPerformers, setTopPerformers] = useState<WorkerStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nameRefresh, setNameRefresh] = useState(0);
 
   const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c1f79e64`;
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+    
+    // Listen for worker name changes
+    const handleStorageChange = () => {
+      setNameRefresh(prev => prev + 1);
+      fetchDashboardData();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('workerNameChanged', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('workerNameChanged', handleStorageChange);
+    };
+  }, [nameRefresh]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -137,7 +153,7 @@ export function Dashboard() {
       if (!stats[record.workerId]) {
         stats[record.workerId] = {
           workerId: record.workerId,
-          workerName: record.workerName,
+          workerName: getWorkerDisplayName(record.workerId, record.workerName),
           totalWigs: 0,
           totalPaid: 0,
         };
@@ -168,66 +184,94 @@ export function Dashboard() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading dashboard...</p>
+          <div className="relative w-20 h-20 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-purple-100"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-purple-600 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-gray-500 font-medium">Loading your dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl">
-          <CardHeader className="pb-3">
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 rounded-3xl p-8 text-white shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold">Welcome back! 👋</h2>
+            <p className="text-purple-100 mt-1">Here's what's happening with your production today</p>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid - Modern Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+          <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium opacity-90">Today's Production</CardTitle>
-              <Calendar className="w-5 h-5 opacity-80" />
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Today's Production</p>
+                <p className="text-4xl font-bold text-gray-900 mt-2">{todayTotal}</p>
+                <p className="text-xs text-gray-400 mt-1">wigs completed</p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
+                <Calendar className="w-7 h-7 text-blue-600" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl md:text-4xl font-bold">{todayTotal}</div>
-            <p className="text-xs opacity-80 mt-1">wigs completed</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
-          <CardHeader className="pb-3">
+        <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+          <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium opacity-90">This Week</CardTitle>
-              <TrendingUp className="w-5 h-5 opacity-80" />
+              <div>
+                <p className="text-sm text-gray-500 font-medium">This Week</p>
+                <p className="text-4xl font-bold text-gray-900 mt-2">{weekTotal}</p>
+                <p className="text-xs text-gray-400 mt-1">total wigs</p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-purple-600" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl md:text-4xl font-bold">{weekTotal}</div>
-            <p className="text-xs opacity-80 mt-1">total wigs</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-xl">
-          <CardHeader className="pb-3">
+        <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-green-500 to-emerald-500"></div>
+          <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium opacity-90">Recent Payments</CardTitle>
-              <DollarSign className="w-5 h-5 opacity-80" />
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Recent Payments</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{formatCurrency(totalPayments)}</p>
+                <p className="text-xs text-gray-400 mt-1">last 5 payments</p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center">
+                <DollarSign className="w-7 h-7 text-green-600" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-bold">{formatCurrency(totalPayments)}</div>
-            <p className="text-xs opacity-80 mt-1">last 5 payments</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-pink-500 to-pink-600 text-white border-0 shadow-xl">
-          <CardHeader className="pb-3">
+        <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+          <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium opacity-90">Active Workers</CardTitle>
-              <Users className="w-5 h-5 opacity-80" />
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Active Workers</p>
+                <p className="text-4xl font-bold text-gray-900 mt-2">{workers.length}</p>
+                <p className="text-xs text-gray-400 mt-1">team members</p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
+                <Users className="w-7 h-7 text-orange-600" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl md:text-4xl font-bold">{workers.length}</div>
-            <p className="text-xs opacity-80 mt-1">team members</p>
           </CardContent>
         </Card>
       </div>
@@ -235,35 +279,51 @@ export function Dashboard() {
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Production */}
-        <Card className="shadow-lg border-0">
-          <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Package className="w-5 h-5 text-purple-600" />
+        <Card className="bg-white border-0 shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-violet-100 pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Package className="w-5 h-5 text-white" />
+              </div>
               Today's Production
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="p-6">
             {todayProduction.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No production recorded today</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Package className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-400 font-medium">No production recorded today</p>
+                <p className="text-gray-300 text-sm mt-1">Add production to see it here</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {todayProduction.map((record, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-2xl hover:shadow-md transition-all"
                   >
-                    <div>
-                      <p className="font-semibold text-gray-900">{record.workerName}</p>
-                      <p className="text-xs text-gray-500">
-                        F:{record.frontal} • C:{record.closure} • S:{record.sewing}
-                      </p>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white ${
+                        index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                        index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
+                        'bg-gradient-to-br from-purple-400 to-pink-500'
+                      }`}>
+                        {record.workerName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{getWorkerDisplayName(record.workerId, record.workerName)}</p>
+                        <p className="text-xs text-gray-500">
+                          F: {record.frontal} • C: {record.closure} {record.sewing > 0 && `• S: ${record.sewing}`}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-purple-600">{record.total}</div>
-                      <p className="text-xs text-gray-500">wigs</p>
+                      <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        {record.total}
+                      </div>
+                      <p className="text-xs text-gray-400">wigs</p>
                     </div>
                   </div>
                 ))}
@@ -273,42 +333,47 @@ export function Dashboard() {
         </Card>
 
         {/* Top Performers */}
-        <Card className="shadow-lg border-0">
-          <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Award className="w-5 h-5 text-purple-600" />
+        <Card className="bg-white border-0 shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-violet-100 pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                <Award className="w-5 h-5 text-white" />
+              </div>
               Top Performers (This Week)
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="p-6">
             {topPerformers.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No data available</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Award className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-400 font-medium">No data available</p>
+                <p className="text-gray-300 text-sm mt-1">Production data will appear here</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {topPerformers.map((worker, index) => (
                   <div
                     key={worker.workerId}
-                    className="flex items-center gap-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg"
+                    className={`flex items-center gap-4 p-4 rounded-2xl ${
+                      index === 0 
+                        ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-100' 
+                        : 'bg-gradient-to-r from-gray-50 to-white'
+                    }`}
                   >
-                    <div className="flex-shrink-0">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-xl ${
-                          index === 0
-                            ? 'bg-gradient-to-br from-yellow-400 to-yellow-600'
-                            : index === 1
-                            ? 'bg-gradient-to-br from-gray-300 to-gray-500'
-                            : 'bg-gradient-to-br from-orange-400 to-orange-600'
-                        }`}
-                      >
-                        {index + 1}
-                      </div>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                      index === 0
+                        ? 'bg-gradient-to-br from-yellow-400 to-yellow-600'
+                        : index === 1
+                        ? 'bg-gradient-to-br from-gray-300 to-gray-500'
+                        : 'bg-gradient-to-br from-orange-400 to-orange-600'
+                    }`}>
+                      {index + 1}
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{worker.workerName}</p>
-                      <p className="text-sm text-gray-600">{worker.totalWigs} wigs this week</p>
+                      <p className="font-bold text-gray-900">{getWorkerDisplayName(worker.workerId, worker.workerName)}</p>
+                      <p className="text-sm text-gray-500">{worker.totalWigs} wigs this week</p>
                     </div>
                     {index === 0 && (
                       <Award className="w-6 h-6 text-yellow-500" />
@@ -322,41 +387,42 @@ export function Dashboard() {
       </div>
 
       {/* Recent Payments */}
-      <Card className="shadow-lg border-0">
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <DollarSign className="w-5 h-5 text-purple-600" />
+      <Card className="bg-white border-0 shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-violet-100 pb-4">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-white" />
+            </div>
             Recent Payments
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="p-6">
           {recentPayments.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No payments recorded yet</p>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <DollarSign className="w-8 h-8 text-gray-300" />
+              </div>
+              <p className="text-gray-400 font-medium">No payments recorded yet</p>
+              <p className="text-gray-300 text-sm mt-1">Payment history will appear here</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-2xl border border-gray-100">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b text-left text-sm text-gray-600">
-                    <th className="pb-3 font-semibold">Worker</th>
-                    <th className="pb-3 font-semibold text-right">Wigs</th>
-                    <th className="pb-3 font-semibold text-right">Amount</th>
-                    <th className="pb-3 font-semibold text-right">Date</th>
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Worker</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Wigs</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {recentPayments.map((payment, index) => (
-                    <tr key={index} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-3 font-medium">{payment.workerName}</td>
-                      <td className="py-3 text-right text-gray-600">{payment.totalWigs}</td>
-                      <td className="py-3 text-right font-semibold text-green-600">
-                        {formatCurrency(payment.amount)}
-                      </td>
-                      <td className="py-3 text-right text-sm text-gray-500">
-                        {formatDate(payment.paidDate)}
-                      </td>
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-4 font-medium text-gray-900">{getWorkerDisplayName(payment.workerId, payment.workerName)}</td>
+                      <td className="py-4 px-4 text-right text-gray-600">{payment.totalWigs}</td>
+                      <td className="py-4 px-4 text-right font-bold text-green-600">{formatCurrency(payment.amount)}</td>
+                      <td className="py-4 px-4 text-right text-sm text-gray-500">{formatDate(payment.paidDate)}</td>
                     </tr>
                   ))}
                 </tbody>
