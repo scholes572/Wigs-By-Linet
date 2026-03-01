@@ -3,6 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp, Users, Package, DollarSign, Award, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { getWorkerDisplayName } from '../../hooks/useWorkers';
+import { Button } from './ui/button';
+
+interface DashboardProps {
+  setActiveTab?: (tab: string) => void;
+}
 
 interface Worker {
   id: string;
@@ -36,7 +41,7 @@ interface WorkerStats {
   totalPaid: number;
 }
 
-export function Dashboard() {
+export function Dashboard({ setActiveTab }: DashboardProps) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [todayProduction, setTodayProduction] = useState<ProductionRecord[]>([]);
   const [weekProduction, setWeekProduction] = useState<ProductionRecord[]>([]);
@@ -206,6 +211,29 @@ export function Dashboard() {
           <div className="text-right">
             <p className="text-3xl font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
           </div>
+        </div>
+        
+        {/* Quick Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+          <Button 
+            onClick={() => setActiveTab?.('daily')}
+            className="h-14 text-base font-semibold bg-white/20 hover:bg-white/30 border-0 rounded-xl flex items-center justify-center gap-2"
+          >
+            <span>➕</span> Record Production
+          </Button>
+          <Button 
+            onClick={() => setActiveTab?.('payments')}
+            className="h-14 text-base font-semibold bg-emerald-500 hover:bg-emerald-600 border-0 rounded-xl flex items-center justify-center gap-2"
+          >
+            <span>💰</span> Pay This Week
+          </Button>
+          <Button 
+            onClick={() => setActiveTab?.('workers')}
+            variant="outline"
+            className="h-14 text-base font-semibold bg-white/10 hover:bg-white/20 border-white/30 text-white rounded-xl flex items-center justify-center gap-2"
+          >
+            <span>👥</span> Add Worker
+          </Button>
         </div>
       </div>
 

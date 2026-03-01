@@ -26,7 +26,11 @@ interface Worker {
   isOwner?: boolean;
 }
 
-export function WorkerManagement() {
+interface WorkerManagementProps {
+  setActiveTab?: (tab: string) => void;
+}
+
+export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

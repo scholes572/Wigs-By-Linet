@@ -167,11 +167,11 @@ function MainContent() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
-          <Dashboard />
+          <Dashboard setActiveTab={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="workers" className="mt-0">
-          <WorkerManagement />
+          <WorkerManagement setActiveTab={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="daily" className="mt-0">
