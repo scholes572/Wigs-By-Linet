@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Calendar, Package, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -47,7 +47,6 @@ export function DailyProduction() {
     
     setToday();
     
-    // Also refresh when page becomes visible (e.g., user switches back to app)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         setToday();
@@ -74,7 +73,11 @@ export function DailyProduction() {
       });
       if (response.ok) {
         const data = await response.json();
-        setWorkers(data.filter((w: Worker) => w.active));
+        // Get deleted workers from localStorage
+        const deletedWorkers = JSON.parse(localStorage.getItem('deleted_workers') || '[]');
+        // Filter out deleted workers and include all active ones plus owner
+        const filteredWorkers = data.filter((worker: Worker) => !deletedWorkers.includes(worker.id));
+        setWorkers(filteredWorkers);
       }
     } catch (error) {
       console.error('Error fetching workers:', error);
@@ -101,7 +104,6 @@ export function DailyProduction() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate inputs
     const frontalNum = Number(frontal);
     const closureNum = Number(closure);
     const sewingNum = Number(sewing);
@@ -116,7 +118,6 @@ export function DailyProduction() {
       return;
     }
     
-    // Validate date is not in the future
     const selectedDate = new Date(date);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -174,42 +175,38 @@ export function DailyProduction() {
   const totalProduction = todayRecords.reduce((sum, record) => sum + record.total, 0);
 
   return (
-    <div className="space-y-8">
-      {/* Header Card */}
-      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 rounded-3xl p-8 text-white shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="bg-blue-600 rounded-xl p-6 text-white">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold">Record Production 📝</h2>
-            <p className="text-purple-100 mt-1">Track wigs made by each worker</p>
+            <h2 className="text-2xl font-bold">Daily Production</h2>
+            <p className="text-blue-100 mt-1">Record wig production</p>
           </div>
-          <div className="text-right">
+          <div className="mt-4 md:mt-0 text-right">
             <p className="text-3xl font-bold">{totalProduction}</p>
-            <p className="text-purple-200 text-sm">total wigs today</p>
+            <p className="text-blue-200 text-sm">Total Wigs</p>
           </div>
         </div>
       </div>
 
-      {/* Form Card */}
-      <Card className="bg-white border-0 shadow-xl overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500"></div>
+      {/* Form */}
+      <Card>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Worker Selection - Full Width */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Package className="w-4 h-4 text-purple-600" />
-                Worker
-              </Label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Worker */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Worker</Label>
               <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-                <SelectTrigger className="h-16 text-lg border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:ring-0 bg-gray-50">
-                  <SelectValue placeholder="Select a worker" />
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Select worker" />
                 </SelectTrigger>
                 <SelectContent>
                   {workers.map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id} className="text-lg py-4">
+                    <SelectItem key={worker.id} value={worker.id}>
                       <div className="flex items-center gap-2">
                         <span>{getWorkerDisplayName(worker.id, worker.name)}</span>
-                        {worker.isOwner && <span className="text-yellow-500">👑</span>}
+                        {worker.isOwner && <span>👑</span>}
                       </div>
                     </SelectItem>
                   ))}
@@ -217,18 +214,29 @@ export function DailyProduction() {
               </Select>
             </div>
 
-            {/* Wig Types - 2x2 Grid with +/- buttons */}
+            {/* Date */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Date</Label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-12"
+              />
+            </div>
+
+            {/* Wig Types Row - Stack on mobile */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-gray-700">Wig Type & Quantity</Label>
-              <div className="grid grid-cols-1 gap-4">
+              <Label className="text-sm font-medium text-gray-700">Wig Type & Quantity</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Frontal */}
-                <div className="bg-gradient-to-br from-violet-50 to-purple-50 p-4 rounded-2xl border-2 border-violet-100">
-                  <p className="text-center font-semibold text-gray-800 mb-3">Frontal</p>
-                  <div className="flex items-center justify-center gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-3 text-center">Frontal</p>
+                  <div className="flex items-center justify-center gap-3">
                     <button 
                       type="button"
                       onClick={() => setFrontal(Math.max(0, (parseInt(frontal) || 0) - 1).toString())}
-                      className="w-12 h-12 rounded-full bg-violet-200 hover:bg-violet-300 text-violet-700 font-bold text-xl flex items-center justify-center"
+                      className="w-12 h-12 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xl"
                     >
                       −
                     </button>
@@ -237,12 +245,12 @@ export function DailyProduction() {
                       min="0"
                       value={frontal}
                       onChange={(e) => setFrontal(e.target.value)}
-                      className="h-14 w-20 text-center text-xl font-bold border-2 border-violet-200 rounded-xl"
+                      className="h-12 w-20 text-center text-lg font-semibold"
                     />
                     <button 
                       type="button"
                       onClick={() => setFrontal(((parseInt(frontal) || 0) + 1).toString())}
-                      className="w-12 h-12 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-bold text-xl flex items-center justify-center"
+                      className="w-12 h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl"
                     >
                       +
                     </button>
@@ -250,13 +258,13 @@ export function DailyProduction() {
                 </div>
 
                 {/* Closure */}
-                <div className="bg-gradient-to-br from-fuchsia-50 to-pink-50 p-4 rounded-2xl border-2 border-fuchsia-100">
-                  <p className="text-center font-semibold text-gray-800 mb-3">Closure</p>
-                  <div className="flex items-center justify-center gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-3 text-center">Closure</p>
+                  <div className="flex items-center justify-center gap-3">
                     <button 
                       type="button"
                       onClick={() => setClosure(Math.max(0, (parseInt(closure) || 0) - 1).toString())}
-                      className="w-12 h-12 rounded-full bg-fuchsia-200 hover:bg-fuchsia-300 text-fuchsia-700 font-bold text-xl flex items-center justify-center"
+                      className="w-12 h-12 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xl"
                     >
                       −
                     </button>
@@ -265,12 +273,12 @@ export function DailyProduction() {
                       min="0"
                       value={closure}
                       onChange={(e) => setClosure(e.target.value)}
-                      className="h-14 w-20 text-center text-xl font-bold border-2 border-fuchsia-200 rounded-xl"
+                      className="h-12 w-20 text-center text-lg font-semibold"
                     />
                     <button 
                       type="button"
                       onClick={() => setClosure(((parseInt(closure) || 0) + 1).toString())}
-                      className="w-12 h-12 rounded-full bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold text-xl flex items-center justify-center"
+                      className="w-12 h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl"
                     >
                       +
                     </button>
@@ -279,15 +287,15 @@ export function DailyProduction() {
               </div>
             </div>
 
-            {/* Sewing field for owner */}
+            {/* Sewing */}
             {selectedWorker && workers.find(w => w.id === selectedWorker)?.isOwner && (
-              <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-2xl border-2 border-amber-100">
-                <p className="text-center font-semibold text-gray-800 mb-3">Sewing (Owner Only)</p>
-                <div className="flex items-center justify-center gap-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-3 text-center">Sewing (Owner Only)</p>
+                <div className="flex items-center justify-center gap-3">
                   <button 
                     type="button"
                     onClick={() => setSewing(Math.max(0, (parseInt(sewing) || 0) - 1).toString())}
-                    className="w-12 h-12 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-700 font-bold text-xl flex items-center justify-center"
+                    className="w-12 h-12 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xl"
                   >
                     −
                   </button>
@@ -296,12 +304,12 @@ export function DailyProduction() {
                     min="0"
                     value={sewing}
                     onChange={(e) => setSewing(e.target.value)}
-                    className="h-14 w-20 text-center text-xl font-bold border-2 border-amber-200 rounded-xl"
+                    className="h-12 w-20 text-center text-lg font-semibold"
                   />
                   <button 
                     type="button"
                     onClick={() => setSewing(((parseInt(sewing) || 0) + 1).toString())}
-                    className="w-12 h-12 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xl flex items-center justify-center"
+                    className="w-12 h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl"
                   >
                     +
                   </button>
@@ -309,24 +317,14 @@ export function DailyProduction() {
               </div>
             )}
 
-            {/* Save Buttons - Bottom Fixed Zone */}
-            <div className="space-y-3 pt-4">
+            {/* Buttons */}
+            <div className="space-y-2">
               <Button 
                 type="submit" 
                 disabled={loading || !selectedWorker} 
-                className="w-full h-16 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-2xl shadow-lg"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700"
               >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Saving...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" />
-                    Save Production
-                  </span>
-                )}
+                {loading ? 'Saving...' : 'Save Production'}
               </Button>
               <Button 
                 type="button" 
@@ -335,13 +333,12 @@ export function DailyProduction() {
                 onClick={() => {
                   if (selectedWorker && (parseInt(frontal) > 0 || parseInt(closure) > 0 || parseInt(sewing) > 0)) {
                     handleSubmit(new Event('submit') as any);
-                    // Reset quantities but keep worker selected
                     setFrontal('0');
                     setClosure('0');
                     setSewing('0');
                   }
                 }}
-                className="w-full h-14 text-base font-medium border-2 border-gray-200 rounded-xl"
+                className="w-full h-11"
               >
                 Save & Add Another
               </Button>
@@ -350,74 +347,39 @@ export function DailyProduction() {
         </CardContent>
       </Card>
 
-      {/* Today's Records */}
-      <Card className="bg-white border-0 shadow-xl overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500"></div>
-        <CardHeader className="pb-2">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <CardTitle className="text-xl font-bold flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Package className="w-5 h-5 text-white" />
-              </div>
-              Production for {new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-            </CardTitle>
-          </div>
+      {/* Records */}
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg">
+            Production - {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="overflow-hidden rounded-2xl border border-gray-100">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Worker</th>
-                  <th className="text-center py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Frontal</th>
-                  <th className="text-center py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Closure</th>
-                  {(selectedWorker && workers.find(w => w.id === selectedWorker)?.isOwner) || !selectedWorker ? (
-                    <th className="text-center py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sewing</th>
-                  ) : null}
-                  <th className="text-center py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {todayRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-16">
-                      <div className="text-gray-400">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                          <Calendar className="w-8 h-8" />
-                        </div>
-                        <p className="font-medium">No production records for this date</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  todayRecords.map((record, index) => (
-                    <tr key={index} className="hover:bg-purple-50 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center font-bold text-white">
-                            {getWorkerDisplayName(record.workerId, record.workerName).charAt(0)}
-                          </div>
-                          <span className="font-semibold text-gray-900">{getWorkerDisplayName(record.workerId, record.workerName)}</span>
-                        </div>
-                      </td>
-                      <td className="text-center py-4 px-6 text-gray-600 font-medium">{record.frontal}</td>
-                      <td className="text-center py-4 px-6 text-gray-600 font-medium">{record.closure}</td>
-                      {(workers.find(w => w.id === record.workerId)?.isOwner) ? (
-                        <td className="text-center py-4 px-6 text-gray-600 font-medium">{record.sewing}</td>
-                      ) : (
-                        <td className="text-center py-4 px-6 text-gray-300">-</td>
-                      )}
-                      <td className="text-center py-4 px-6">
-                        <span className="inline-flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-sm px-4 py-2 rounded-full">
-                          {record.total}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+        <CardContent className="p-0">
+          {todayRecords.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Calendar className="w-10 h-10 mx-auto mb-2" />
+              <p>No records for this date</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {todayRecords.map((record, index) => (
+                <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                      {getWorkerDisplayName(record.workerId, record.workerName).charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium">{getWorkerDisplayName(record.workerId, record.workerName)}</p>
+                      <p className="text-xs text-gray-500">F: {record.frontal} | C: {record.closure} | S: {record.sewing || '-'}</p>
+                    </div>
+                  </div>
+                  <span className="bg-blue-600 text-white font-bold px-4 py-1.5 rounded-full">
+                    {record.total}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -61,7 +61,6 @@ export function WeeklyPayments() {
     
     setCurrentWeek();
     
-    // Also refresh when page becomes visible (e.g., user switches back to app)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         setCurrentWeek();
@@ -88,7 +87,6 @@ export function WeeklyPayments() {
       if (response.ok) {
         const data: ProductionRecord[] = await response.json();
         
-        // Aggregate by worker
         const summary: { [key: string]: WeeklySummary } = {};
         data.forEach((record) => {
           if (!summary[record.workerId]) {
@@ -108,10 +106,9 @@ export function WeeklyPayments() {
         });
         
         setWeeklySummary(Object.values(summary).filter(w => {
-          // Filter out owner if workers are loaded
           const worker = workers.find(worker => worker.id === w.workerId);
-          // Only show if: workers not loaded yet OR worker is not the owner
-          return !worker?.isOwner;
+          // Only show active workers who are not the owner
+          return worker && worker.active && !worker.isOwner;
         }));
       }
     } catch (error) {
@@ -174,49 +171,49 @@ export function WeeklyPayments() {
     return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
+  const goToThisWeek = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    setWeekStartDate(monday.toISOString().split('T')[0]);
+    setWeekEndDate(sunday.toISOString().split('T')[0]);
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Header Card */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-500 rounded-3xl p-8 text-white shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="bg-blue-600 rounded-xl p-6 text-white">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-              <Wallet className="w-8 h-8" />
-              Weekly Payments 💰
-            </h2>
-            <p className="text-emerald-100 mt-1">Process payments for your team's hard work</p>
+            <h2 className="text-2xl font-bold">Weekly Payments</h2>
+            <p className="text-blue-100 mt-1">Process payments for your team</p>
           </div>
-          <div className="text-right">
-            <p className="text-4xl font-bold">{totalWeeklyWigs}</p>
-            <p className="text-emerald-200 text-sm">wigs produced this week</p>
+          <div className="mt-4 md:mt-0 text-right">
+            <p className="text-3xl font-bold">{totalWeeklyWigs}</p>
+            <p className="text-blue-200 text-sm">Total Wigs</p>
           </div>
         </div>
       </div>
 
-      {/* Week Display */}
-      <Card className="bg-white border-0 shadow-xl overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
-              <Calendar className="w-7 h-7 text-emerald-600" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-500 font-medium">Current Week</p>
-              <p className="text-2xl font-bold text-gray-900">{formatDateRange()}</p>
+      {/* Current Week */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Current Week</p>
+                <p className="text-lg font-semibold">{formatDateRange()}</p>
+              </div>
             </div>
             <Button 
-              onClick={() => {
-                const today = new Date();
-                const dayOfWeek = today.getDay();
-                const monday = new Date(today);
-                monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-                const sunday = new Date(monday);
-                sunday.setDate(monday.getDate() + 6);
-                setWeekStartDate(monday.toISOString().split('T')[0]);
-                setWeekEndDate(sunday.toISOString().split('T')[0]);
-              }}
-              className="ml-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              onClick={goToThisWeek}
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
             >
               This Week
             </Button>
@@ -224,64 +221,120 @@ export function WeeklyPayments() {
         </CardContent>
       </Card>
 
-      {/* Summary Table - Mobile Responsive */}
-      <Card className="bg-white border-0 shadow-xl overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-bold flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-white" />
-            </div>
-            Payment Summary
-          </CardTitle>
+      {/* Summary Table */}
+      <Card>
+        <CardHeader className="border-b pb-3">
+          <CardTitle className="text-lg">Payment Summary</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Mobile: Horizontal scroll with visual hint */}
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200">
-            <table className="w-full min-w-[700px]">
+          {/* Mobile: stacked cards */}
+          <div className="space-y-3 p-4 md:hidden">
+            {weeklySummary.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <DollarSign className="w-10 h-10 mx-auto mb-2" />
+                <p>No production records for this week</p>
+              </div>
+            ) : (
+              weeklySummary.map((worker) => (
+                <div key={worker.workerId} className="bg-white border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                        {getWorkerDisplayName(worker.workerId, worker.workerName).charAt(0)}
+                      </div>
+                      <span className="font-semibold">{getWorkerDisplayName(worker.workerId, worker.workerName)}</span>
+                    </div>
+                    <span className="bg-blue-600 text-white font-bold text-sm px-3 py-1 rounded-full">
+                      {worker.total}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                    <div className="bg-gray-50 rounded-lg py-2">
+                      <p className="text-xs text-gray-500 uppercase">Frontal</p>
+                      <p className="font-bold">{worker.frontal}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg py-2">
+                      <p className="text-xs text-gray-500 uppercase">Closure</p>
+                      <p className="font-bold">{worker.closure}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg py-2">
+                      <p className="text-xs text-gray-500 uppercase">Sewing</p>
+                      <p className="font-bold">{worker.sewing || '-'}</p>
+                    </div>
+                  </div>
+                  {selectedWorker === worker.workerId ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="KSh"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        className="flex-1 h-10 text-sm font-bold"
+                        autoFocus
+                      />
+                      <Button size="sm" onClick={() => handlePayment(worker)} disabled={loading} className="h-10 bg-green-600">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setSelectedWorker(''); setPaymentAmount(''); }} className="h-10">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      onClick={() => setSelectedWorker(worker.workerId)}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      <DollarSign className="w-4 h-4 mr-2" /> Pay Worker
+                    </Button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: table view */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">Worker</th>
-                  <th className="text-center py-4 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Frontal</th>
-                  <th className="text-center py-4 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Closure</th>
-                  <th className="text-center py-4 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-yellow-50">Sewing</th>
-                  <th className="text-center py-4 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="text-center py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50">Action</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Worker</th>
+                  <th className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">Frontal</th>
+                  <th className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">Closure</th>
+                  <th className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">Sewing</th>
+                  <th className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {weeklySummary.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-16">
+                    <td colSpan={6} className="text-center py-12">
                       <div className="text-gray-400">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                          <DollarSign className="w-8 h-8" />
-                        </div>
-                        <p className="font-medium">No production records for this week</p>
-                        <p className="text-sm mt-1">Add production records to see payment summary</p>
+                        <DollarSign className="w-10 h-10 mx-auto mb-2" />
+                        <p>No production records for this week</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   weeklySummary.map((worker) => (
-                    <tr key={worker.workerId} className="hover:bg-emerald-50 transition-colors">
-                      <td className="py-4 px-4 sticky left-0 bg-white">
+                    <tr key={worker.workerId} className="hover:bg-gray-50">
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center font-bold text-white">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center font-bold text-blue-700">
                             {getWorkerDisplayName(worker.workerId, worker.workerName).charAt(0)}
                           </div>
-                          <span className="font-semibold text-gray-900">{getWorkerDisplayName(worker.workerId, worker.workerName)}</span>
+                          <span className="font-semibold">{getWorkerDisplayName(worker.workerId, worker.workerName)}</span>
                         </div>
                       </td>
-                      <td className="text-center py-4 px-3 text-gray-600 font-medium">{worker.frontal}</td>
-                      <td className="text-center py-4 px-3 text-gray-600 font-medium">{worker.closure}</td>
-                      <td className="text-center py-4 px-3 font-medium bg-yellow-50 text-yellow-700">{worker.sewing || '-'}</td>
-                      <td className="text-center py-4 px-3">
-                        <span className="inline-flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-sm px-3 py-1.5 rounded-full">
+                      <td className="text-center py-3 px-3">{worker.frontal}</td>
+                      <td className="text-center py-3 px-3">{worker.closure}</td>
+                      <td className="text-center py-3 px-3">{worker.sewing || '-'}</td>
+                      <td className="text-center py-3 px-3">
+                        <span className="bg-blue-600 text-white font-bold text-sm px-3 py-1 rounded-full">
                           {worker.total}
                         </span>
                       </td>
-                      <td className="py-4 px-4 sticky right-0 bg-white">
+                      <td className="py-3 px-4">
                         {selectedWorker === worker.workerId ? (
                           <div className="flex items-center gap-1 justify-end">
                             <Input
@@ -289,20 +342,20 @@ export function WeeklyPayments() {
                               placeholder="KSh"
                               value={paymentAmount}
                               onChange={(e) => setPaymentAmount(e.target.value)}
-                              className="w-24 h-9 text-sm font-bold border-emerald-200 rounded-lg"
+                              className="w-24 h-8 text-sm"
                               autoFocus
                             />
-                            <Button size="sm" onClick={() => handlePayment(worker)} disabled={loading} className="h-9 bg-green-600">
+                            <Button size="sm" onClick={() => handlePayment(worker)} disabled={loading} className="h-8 bg-green-600">
                               <CheckCircle2 className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedWorker(''); setPaymentAmount(''); }} className="h-9">
+                            <Button size="sm" variant="outline" onClick={() => { setSelectedWorker(''); setPaymentAmount(''); }} className="h-8">
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
                         ) : (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-teal-500 font-medium">
+                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                                 <DollarSign className="w-4 h-4 mr-1" /> Pay
                               </Button>
                             </AlertDialogTrigger>
@@ -329,31 +382,27 @@ export function WeeklyPayments() {
               </tbody>
               {weeklySummary.length > 0 && (
                 <tfoot>
-                  <tr className="bg-gradient-to-r from-emerald-50 to-teal-50">
-                    <td className="py-4 px-4 font-bold text-gray-900 sticky left-0 bg-emerald-50">TOTAL</td>
-                    <td className="text-center py-4 px-3 font-bold text-gray-900">
+                  <tr className="bg-gray-50">
+                    <td className="py-3 px-4 font-bold">TOTAL</td>
+                    <td className="text-center py-3 px-3 font-bold">
                       {weeklySummary.reduce((sum, w) => sum + w.frontal, 0)}
                     </td>
-                    <td className="text-center py-4 px-3 font-bold text-gray-900">
+                    <td className="text-center py-3 px-3 font-bold">
                       {weeklySummary.reduce((sum, w) => sum + w.closure, 0)}
                     </td>
-                    <td className="text-center py-4 px-3 font-bold text-gray-900 bg-yellow-50">
+                    <td className="text-center py-3 px-3 font-bold">
                       {weeklySummary.reduce((sum, w) => sum + w.sewing, 0) || '-'}
                     </td>
-                    <td className="text-center py-4 px-3">
-                      <span className="inline-flex items-center justify-center bg-emerald-600 text-white font-bold text-sm px-3 py-1.5 rounded-full">
+                    <td className="text-center py-3 px-3">
+                      <span className="bg-blue-600 text-white font-bold text-sm px-3 py-1 rounded-full">
                         {totalWeeklyWigs}
                       </span>
                     </td>
-                    <td className="sticky right-0 bg-emerald-50"></td>
+                    <td></td>
                   </tr>
                 </tfoot>
               )}
             </table>
-          </div>
-          {/* Mobile scroll hint */}
-          <div className="md:hidden text-center py-2 text-xs text-gray-400">
-            ← Swipe to see all columns →
           </div>
         </CardContent>
       </Card>

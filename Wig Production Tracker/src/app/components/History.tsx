@@ -75,7 +75,11 @@ export function History() {
       });
       if (response.ok) {
         const data = await response.json();
-        setWorkers(data);
+        // Get deleted workers from localStorage
+        const deletedWorkers = JSON.parse(localStorage.getItem('deleted_workers') || '[]');
+        // Filter out deleted workers
+        const filteredWorkers = data.filter((worker: Worker) => !deletedWorkers.includes(worker.id));
+        setWorkers(filteredWorkers);
       }
     } catch (error) {
       console.error('Error fetching workers:', error);
@@ -176,18 +180,18 @@ export function History() {
   return (
     <div className="space-y-8">
       {/* Header Card */}
-      <div className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 rounded-3xl p-8 text-white shadow-xl">
+      <div className="bg-violet-700 rounded-3xl p-8 text-white shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
               <HistoryIcon className="w-8 h-8" />
               Payment History 📋
             </h2>
-            <p className="text-slate-300 mt-1">View and export all payment records</p>
+            <p className="text-violet-200 mt-1">View and export all payment records</p>
           </div>
           <div className="text-right">
             <p className="text-4xl font-bold">{formatCurrency(totalPaid)}</p>
-            <p className="text-slate-400 text-sm">total payments</p>
+            <p className="text-violet-300 text-sm">total payments</p>
           </div>
         </div>
       </div>
@@ -196,11 +200,11 @@ export function History() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Label className="text-sm font-semibold text-gray-700 mb-3 block flex items-center gap-2">
-            <Package className="w-4 h-4 text-purple-600" />
+            <Package className="w-4 h-4 text-violet-600" />
             Filter by Worker
           </Label>
           <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-            <SelectTrigger className="h-14 text-lg border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:ring-0 bg-white">
+            <SelectTrigger className="h-14 text-lg border-2 border-gray-100 rounded-xl focus:border-violet-500 focus:ring-0 bg-white">
               <SelectValue placeholder="Select worker" />
             </SelectTrigger>
             <SelectContent>
@@ -222,13 +226,13 @@ export function History() {
           </Select>
         </div>
 
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
+        <Card className="bg-violet-600 text-white border-0 shadow-lg">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm">Total Payments</p>
+                <p className="text-violet-200 text-sm">Total Payments</p>
                 <p className="text-3xl font-bold mt-1">{formatCurrency(totalPaid)}</p>
-                <p className="text-green-200 text-xs mt-1">{displayPayments.length} payments</p>
+                <p className="text-violet-300 text-xs mt-1">{displayPayments.length} payments</p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
                 <DollarSign className="w-7 h-7" />
@@ -252,8 +256,7 @@ export function History() {
           </TabsList>
 
           <TabsContent value="payments" className="mt-0">
-            <Card className="bg-white border-0 shadow-xl overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
+            <Card className="bg-white border border-gray-100 shadow-xl">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   {workerHistory.payments.length === 0 ? (
@@ -267,12 +270,12 @@ export function History() {
                     workerHistory.payments.map((payment, index) => (
                       <div
                         key={index}
-                        className="border-2 border-gray-100 rounded-2xl p-5 hover:border-green-200 hover:bg-green-50 transition-all"
+                        className="border-2 border-gray-100 rounded-2xl p-5 hover:border-violet-200 hover:bg-violet-50 transition-all"
                       >
                         <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center">
-                              <DollarSign className="w-6 h-6 text-white" />
+                            <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center">
+                              <DollarSign className="w-6 h-6 text-violet-600" />
                             </div>
                             <div>
                               <div className="font-bold text-xl text-gray-900">
@@ -283,17 +286,15 @@ export function History() {
                               </div>
                             </div>
                           </div>
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 px-4 py-2">
+                          <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 px-4 py-2">
                             Paid on {formatDate(payment.paidDate)}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm">
                           <span className="bg-gray-100 px-3 py-1.5 rounded-lg">Total: {payment.totalWigs}</span>
-                          <span className="bg-purple-50 px-3 py-1.5 rounded-lg text-purple-700">Frontal: {payment.details.frontal}</span>
-                          <span className="bg-pink-50 px-3 py-1.5 rounded-lg text-pink-700">Closure: {payment.details.closure}</span>
-                          {payment.details.sewing > 0 && (
-                            <span className="bg-yellow-50 px-3 py-1.5 rounded-lg text-yellow-700">Sewing: {payment.details.sewing}</span>
-                          )}
+                          <span className="bg-violet-50 px-3 py-1.5 rounded-lg text-violet-700">Frontal: {payment.details.frontal}</span>
+                          <span className="bg-violet-50 px-3 py-1.5 rounded-lg text-violet-700">Closure: {payment.details.closure}</span>
+                          <span className="bg-yellow-50 px-3 py-1.5 rounded-lg text-yellow-700">Sewing: {payment.details.sewing || 0}</span>
                         </div>
                       </div>
                     ))
@@ -304,8 +305,7 @@ export function History() {
           </TabsContent>
 
           <TabsContent value="production" className="mt-0">
-            <Card className="bg-white border-0 shadow-xl overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+            <Card className="bg-white border border-gray-100 shadow-xl">
               <CardContent className="p-6">
                 <div className="overflow-hidden rounded-2xl border border-gray-100">
                   <table className="w-full">
@@ -334,13 +334,13 @@ export function History() {
                         workerHistory.production
                           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                           .map((record, index) => (
-                            <tr key={index} className="hover:bg-purple-50">
+                            <tr key={index} className="hover:bg-violet-50">
                               <td className="py-4 px-6 font-medium text-gray-900">{formatDate(record.date)}</td>
                               <td className="text-right py-4 px-4 text-gray-600">{record.frontal}</td>
                               <td className="text-right py-4 px-4 text-gray-600">{record.closure}</td>
                               <td className="text-right py-4 px-4 text-gray-600">{record.sewing || '-'}</td>
                               <td className="text-right py-4 px-4">
-                                <span className="inline-flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-sm px-3 py-1 rounded-full">
+                                <span className="inline-flex items-center justify-center bg-violet-600 text-white font-bold text-sm px-3 py-1 rounded-full">
                                   {record.total}
                                 </span>
                               </td>
@@ -357,25 +357,14 @@ export function History() {
       )}
 
       {selectedWorker === 'all' && (
-        <Card className="bg-white border-0 shadow-xl overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-slate-500 to-slate-600"></div>
+        <Card className="bg-white border border-gray-100 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xl font-bold flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
-                <Receipt className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                <Receipt className="w-5 h-5 text-violet-600" />
               </div>
               All Payment History
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportToCSV}
-              disabled={allPayments.length === 0}
-              className="rounded-xl"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4">
@@ -390,11 +379,11 @@ export function History() {
                 allPayments.map((payment, index) => (
                   <div
                     key={index}
-                    className="border-2 border-gray-100 rounded-2xl p-5 hover:border-slate-200 hover:bg-slate-50 transition-all"
+                    className="border-2 border-gray-100 rounded-2xl p-5 hover:border-violet-200 hover:bg-violet-50 transition-all"
                   >
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center font-bold text-white">
+                        <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center font-bold text-violet-700">
                           {getWorkerDisplayName(payment.workerId, payment.workerName).charAt(0)}
                         </div>
                         <div>
@@ -411,11 +400,9 @@ export function History() {
                     </div>
                     <div className="flex flex-wrap gap-3 text-sm">
                       <span className="bg-gray-100 px-3 py-1.5 rounded-lg">Total: {payment.totalWigs}</span>
-                      <span className="bg-purple-50 px-3 py-1.5 rounded-lg text-purple-700">F: {payment.details.frontal}</span>
-                      <span className="bg-pink-50 px-3 py-1.5 rounded-lg text-pink-700">C: {payment.details.closure}</span>
-                      {payment.details.sewing > 0 && (
-                        <span className="bg-yellow-50 px-3 py-1.5 rounded-lg text-yellow-700">S: {payment.details.sewing}</span>
-                      )}
+                      <span className="bg-violet-50 px-3 py-1.5 rounded-lg text-violet-700">F: {payment.details.frontal}</span>
+                      <span className="bg-violet-50 px-3 py-1.5 rounded-lg text-violet-700">C: {payment.details.closure}</span>
+                      <span className="bg-yellow-50 px-3 py-1.5 rounded-lg text-yellow-700">S: {payment.details.sewing || 0}</span>
                     </div>
                   </div>
                 ))

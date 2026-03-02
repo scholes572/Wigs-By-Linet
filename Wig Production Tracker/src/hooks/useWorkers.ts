@@ -10,13 +10,23 @@ export interface Worker {
   isOwner?: boolean;
 }
 
-// Apply name changes from localStorage to worker list
+// Apply name changes and active status from localStorage to worker list
 function applyNameChanges(workers: Worker[]): Worker[] {
   const nameChanges = JSON.parse(localStorage.getItem('worker_name_changes') || '{}');
-  return workers.map(worker => ({
-    ...worker,
-    name: nameChanges[worker.id] || worker.name
-  }));
+  const customWorkers = JSON.parse(localStorage.getItem('custom_workers') || '[]');
+  const deletedWorkers = JSON.parse(localStorage.getItem('deleted_workers') || '[]');
+  
+  // Filter out deleted workers first
+  const activeWorkers = workers.filter(worker => !deletedWorkers.includes(worker.id));
+  
+  return activeWorkers.map(worker => {
+    const customWorker = customWorkers.find((w: Worker) => w.id === worker.id);
+    return {
+      ...worker,
+      name: nameChanges[worker.id] || worker.name,
+      active: customWorker ? customWorker.active : worker.active
+    };
+  });
 }
 
 export function useWorkers() {
