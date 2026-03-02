@@ -1,13 +1,40 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
-import * as kv from "./kv_store.tsx";
+import { createClient } from "npm:@supabase/supabase-js@2.49.8";
+
 const app = new Hono();
+
+// KV Store functions
+const client = () => createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
+
+const kv = {
+  set: async (key: string, value: any): Promise<void> => {
+    const supabase = client()
+    const { error } = await supabase.from("kv_store_c1f79e64").upsert({ key, value });
+    if (error) throw new Error(error.message);
+  },
+  get: async (key: string): Promise<any> => {
+    const supabase = client()
+    const { data, error } = await supabase.from("kv_store_c1f79e64").select("value").eq("key", key).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data?.value;
+  },
+  getByPrefix: async (prefix: string): Promise<any[]> => {
+    const supabase = client()
+    const { data, error } = await supabase.from("kv_store_c1f79e64").select("key, value").like("key", prefix + "%");
+    if (error) throw new Error(error.message);
+    return data?.map((d: any) => d.value) ?? [];
+  },
+};
 
 // Enable logger
 app.use('*', logger(console.log));
 
-// Enable CORS for all routes and methods
+// Enable CORS
 app.use(
   "/*",
   cors({
@@ -19,7 +46,7 @@ app.use(
   }),
 );
 
-// Health check endpoint
+// Health check
 app.get("/make-server-c1f79e64/health", (c) => {
   return c.json({ status: "ok" });
 });
@@ -29,7 +56,6 @@ app.get("/make-server-c1f79e64/workers", async (c) => {
   try {
     const workers = await kv.get("workers");
     if (!workers) {
-      // Initialize default workers
       const defaultWorkers = [
         { id: "1", name: "Hellen", active: true },
         { id: "2", name: "Naomi", active: true },
@@ -50,7 +76,7 @@ app.get("/make-server-c1f79e64/workers", async (c) => {
   }
 });
 
-// Update workers (add, edit, delete workers)
+// Update workers
 app.put("/make-server-c1f79e64/workers", async (c) => {
   try {
     const workers = await c.req.json();
@@ -88,7 +114,7 @@ app.post("/make-server-c1f79e64/production", async (c) => {
   }
 });
 
-// Get production records for a date range
+// Get production records for date range
 app.get("/make-server-c1f79e64/production/:startDate/:endDate", async (c) => {
   try {
     const { startDate, endDate } = c.req.param();
@@ -135,7 +161,6 @@ app.post("/make-server-c1f79e64/payment", async (c) => {
 app.get("/make-server-c1f79e64/payments", async (c) => {
   try {
     const payments = await kv.getByPrefix("payment_");
-    // Sort by date descending
     payments.sort((a: any, b: any) => new Date(b.paidDate).getTime() - new Date(a.paidDate).getTime());
     return c.json(payments);
   } catch (error) {
@@ -144,7 +169,7 @@ app.get("/make-server-c1f79e64/payments", async (c) => {
   }
 });
 
-// Get worker history (production + payments)
+// Get worker history
 app.get("/make-server-c1f79e64/worker/:workerId/history", async (c) => {
   try {
     const { workerId } = c.req.param();

@@ -50,11 +50,14 @@ export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
   const fetchWorkers = async () => {
     setLoading(true);
     try {
+      console.log('Fetching workers from:', `${API_URL}/workers`);
       const response = await fetch(`${API_URL}/workers`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` },
       });
+      console.log('Fetch workers response:', response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log('Workers from server:', data);
         
         // Get custom workers from localStorage
         const customWorkers = JSON.parse(localStorage.getItem('custom_workers') || '[]');
@@ -72,13 +75,41 @@ export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
             return worker;
           });
         
+        console.log('Merged workers:', mergedWorkers);
         setWorkers(mergedWorkers);
+      } else {
+        console.error('Failed to fetch workers, status:', response.status);
       }
     } catch (error) {
       console.error('Error fetching workers:', error);
       toast.error('Failed to load workers');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Save workers to server
+  const saveWorkersToServer = async (workersToSave: Worker[]) => {
+    try {
+      console.log('Saving workers to server:', workersToSave);
+      const response = await fetch(`${API_URL}/workers`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workersToSave),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server response error:', response.status, errorText);
+        throw new Error(`Failed to save workers: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Workers saved successfully:', result);
+    } catch (error) {
+      console.error('Error saving workers to server:', error);
+      toast.error('Failed to save workers to server');
     }
   };
 
@@ -100,6 +131,10 @@ export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
       const updatedWorkers = [...workers, newWorker];
       localStorage.setItem('custom_workers', JSON.stringify(updatedWorkers.filter(w => !w.isOwner)));
       setWorkers(updatedWorkers);
+      
+      // Save to server
+      await saveWorkersToServer(updatedWorkers);
+      
       setNewWorkerName('');
       setIsAddDialogOpen(false);
       toast.success(`${newWorkerName} has been added successfully`);
@@ -128,7 +163,9 @@ export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
       nameChanges[selectedWorker.id] = editWorkerName.trim();
       localStorage.setItem('worker_name_changes', JSON.stringify(nameChanges));
       
-      window.dispatchEvent(new Event('workerNameChanged'));
+      // Save to server
+      await saveWorkersToServer(updatedWorkers);
+      
       window.dispatchEvent(new Event('workerNameChanged'));
       
       setWorkers(updatedWorkers);
@@ -155,6 +192,10 @@ export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
     );
     setWorkers(updatedWorkers);
     localStorage.setItem('custom_workers', JSON.stringify(updatedWorkers.filter(w => !w.isOwner)));
+    
+    // Save to server
+    await saveWorkersToServer(updatedWorkers);
+    
     window.dispatchEvent(new Event('workerNameChanged'));
     toast.success(`${worker.name} has been ${worker.active ? 'deactivated' : 'activated'}`);
   };
@@ -168,6 +209,9 @@ export function WorkerManagement({ setActiveTab }: WorkerManagementProps) {
     const updatedWorkers = workers.filter(w => w.id !== selectedWorker.id);
     setWorkers(updatedWorkers);
     localStorage.setItem('custom_workers', JSON.stringify(updatedWorkers.filter(w => !w.isOwner)));
+    
+    // Save to server
+    await saveWorkersToServer(updatedWorkers);
     
     // Track deleted workers
     const deletedWorkers = JSON.parse(localStorage.getItem('deleted_workers') || '[]');

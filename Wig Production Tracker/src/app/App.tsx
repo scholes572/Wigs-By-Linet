@@ -6,7 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { WorkerManagement } from './components/WorkerManagement';
 import { Login } from './components/Login';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Scissors, LayoutDashboard, Calendar, DollarSign, History as HistoryIcon, Users, LogOut, Settings } from 'lucide-react';
+import { Scissors, LayoutDashboard, Calendar, DollarSign, History as HistoryIcon, Users, LogOut } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
 import { Button } from './components/ui/button';
 
@@ -21,16 +21,6 @@ export default function App() {
       setIsLoggedIn(true);
     }
     
-    // Clear practice data but keep owner - run this only once
-    const practiceDataCleared = localStorage.getItem('practice_data_cleared');
-    if (practiceDataCleared !== 'true') {
-      // Clear custom workers, keeping only owner in the database
-      localStorage.removeItem('custom_workers');
-      localStorage.removeItem('worker_name_changes');
-      localStorage.removeItem('deleted_workers');
-      localStorage.setItem('practice_data_cleared', 'true');
-    }
-    
     setIsLoading(false);
   }, []);
 
@@ -41,17 +31,6 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('wigs_by_linet_logged_in');
     setIsLoggedIn(false);
-  };
-
-  const handleClearData = () => {
-    if (confirm('Are you sure you want to clear all local data? This will refresh all worker information from the database.')) {
-      localStorage.removeItem('custom_workers');
-      localStorage.removeItem('worker_name_changes');
-      localStorage.removeItem('deleted_workers');
-      localStorage.removeItem('practice_data_cleared');
-      localStorage.removeItem('wigs_active_tab');
-      window.location.reload();
-    }
   };
 
   if (isLoading) {
@@ -88,15 +67,17 @@ export default function App() {
                 </h1>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearData}
-              className="rounded-xl text-gray-500 hover:text-gray-700"
-              title="Refresh all data"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="rounded-xl text-gray-500 hover:text-gray-700"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
