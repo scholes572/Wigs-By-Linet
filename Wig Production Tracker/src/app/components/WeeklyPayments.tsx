@@ -34,11 +34,28 @@ interface WeeklySummary {
   total: number;
 }
 
+interface Payment {
+  id: string;
+  workerId: string;
+  workerName: string;
+  weekStartDate: string;
+  weekEndDate: string;
+  totalWigs: number;
+  amount: number;
+  details: {
+    frontal: number;
+    closure: number;
+    sewing: number;
+  };
+  paidDate: string;
+}
+
 export function WeeklyPayments() {
   const { workers } = useWorkers();
   const [weekStartDate, setWeekStartDate] = useState('');
   const [weekEndDate, setWeekEndDate] = useState('');
   const [weeklySummary, setWeeklySummary] = useState<WeeklySummary[]>([]);
+  const [paidWorkers, setPaidWorkers] = useState<Set<string>>(new Set());
   const [selectedWorker, setSelectedWorker] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,6 +91,7 @@ export function WeeklyPayments() {
   useEffect(() => {
     if (weekStartDate && weekEndDate) {
       fetchWeeklySummary();
+      fetchPaidWorkers();
     }
   }, [weekStartDate, weekEndDate, workers]);
 
@@ -116,6 +134,32 @@ export function WeeklyPayments() {
     }
   };
 
+  const fetchPaidWorkers = async () => {
+    try {
+      // Use existing /payments endpoint and filter on client side
+      const response = await fetch(`${API_URL}/payments`, {
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+        },
+      });
+      if (response.ok) {
+        const allPayments: Payment[] = await response.json();
+        // Filter payments for the current week - compare as YYYY-MM-DD strings
+        const weekPayments = allPayments.filter(p => {
+          const paymentStart = p.weekStartDate ? p.weekStartDate.split('T')[0] : '';
+          const paymentEnd = p.weekEndDate ? p.weekEndDate.split('T')[0] : '';
+          return paymentStart === weekStartDate && paymentEnd === weekEndDate;
+        });
+        const paidWorkerIds = new Set(weekPayments.map(p => p.workerId));
+        setPaidWorkers(paidWorkerIds);
+      }
+    } catch (error) {
+      console.error('Error fetching paid workers:', error);
+    }
+  };
+
+  const isWorkerPaid = (workerId: string) => paidWorkers.has(workerId);
+
   const handlePayment = async (worker: WeeklySummary) => {
     if (!paymentAmount || Number(paymentAmount) <= 0) {
       toast.error('Please enter a valid payment amount');
@@ -151,6 +195,8 @@ export function WeeklyPayments() {
         });
         setPaymentAmount('');
         setSelectedWorker('');
+        // Refresh paid workers list
+        fetchPaidWorkers();
       } else {
         toast.error('Failed to record payment');
       }
@@ -282,9 +328,14 @@ export function WeeklyPayments() {
                   ) : (
                     <Button 
                       onClick={() => setSelectedWorker(worker.workerId)}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 disabled:cursor-not-allowed"
+                      disabled={isWorkerPaid(worker.workerId)}
                     >
-                      <DollarSign className="w-4 h-4 mr-2" /> Pay Worker
+                      {isWorkerPaid(worker.workerId) ? (
+                        <><CheckCircle2 className="w-4 h-4 mr-2" /> Paid</>
+                      ) : (
+                        <><DollarSign className="w-4 h-4 mr-2" /> Pay Worker</>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -355,8 +406,16 @@ export function WeeklyPayments() {
                         ) : (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                <DollarSign className="w-4 h-4 mr-1" /> Pay
+                              <Button 
+                                size="sm" 
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 disabled:cursor-not-allowed"
+                                disabled={isWorkerPaid(worker.workerId)}
+                              >
+                                {isWorkerPaid(worker.workerId) ? (
+                                  <><CheckCircle2 className="w-4 h-4 mr-1" /> Paid</>
+                                ) : (
+                                  <><DollarSign className="w-4 h-4 mr-1" /> Pay</>
+                                )}
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>

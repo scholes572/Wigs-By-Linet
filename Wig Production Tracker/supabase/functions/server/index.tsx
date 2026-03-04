@@ -131,6 +131,23 @@ app.post("/make-server-c1f79e64/payment", async (c) => {
   }
 });
 
+// Get payments for a specific week
+app.get("/make-server-c1f79e64/payments/:startDate/:endDate", async (c) => {
+  try {
+    const { startDate, endDate } = c.req.param();
+    const allPayments = await kv.getByPrefix("payment_");
+    
+    const filteredPayments = allPayments.filter((payment: any) => {
+      return payment.weekStartDate >= startDate && payment.weekStartDate <= endDate;
+    });
+    
+    return c.json(filteredPayments);
+  } catch (error) {
+    console.error("Error fetching weekly payments:", error);
+    return c.json({ error: "Failed to fetch weekly payments" }, 500);
+  }
+});
+
 // Get all payment history
 app.get("/make-server-c1f79e64/payments", async (c) => {
   try {
