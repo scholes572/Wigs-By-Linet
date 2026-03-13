@@ -113,6 +113,7 @@ app.post("/make-server-c1f79e64/payment", async (c) => {
     
     const paymentId = `payment_${Date.now()}_${workerId}`;
     const payment = {
+      id: paymentId,
       workerId,
       workerName,
       weekStartDate,
@@ -138,7 +139,9 @@ app.get("/make-server-c1f79e64/payments/:startDate/:endDate", async (c) => {
     const allPayments = await kv.getByPrefix("payment_");
     
     const filteredPayments = allPayments.filter((payment: any) => {
-      return payment.weekStartDate >= startDate && payment.weekStartDate <= endDate;
+      const paymentStart = payment.weekStartDate ? payment.weekStartDate.split('T')[0] : '';
+      const paymentEnd = payment.weekEndDate ? payment.weekEndDate.split('T')[0] : '';
+      return paymentStart === startDate && paymentEnd === endDate;
     });
     
     return c.json(filteredPayments);
@@ -158,6 +161,18 @@ app.get("/make-server-c1f79e64/payments", async (c) => {
   } catch (error) {
     console.log("Error fetching payment history:", error);
     return c.json({ error: "Failed to fetch payment history" }, 500);
+  }
+});
+
+// Delete a payment record
+app.delete("/make-server-c1f79e64/payment/:paymentId", async (c) => {
+  try {
+    const { paymentId } = c.req.param();
+    await kv.del(paymentId);
+    return c.json({ success: true, message: "Payment deleted" });
+  } catch (error) {
+    console.log("Error deleting payment:", error);
+    return c.json({ error: "Failed to delete payment" }, 500);
   }
 });
 

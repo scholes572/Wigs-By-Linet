@@ -91,7 +91,9 @@ export function WeeklyPayments() {
   useEffect(() => {
     if (weekStartDate && weekEndDate) {
       fetchWeeklySummary();
-      fetchPaidWorkers();
+      if (weekStartDate && weekEndDate) {
+        fetchPaidWorkers(weekStartDate, weekEndDate);
+      }
     }
   }, [weekStartDate, weekEndDate, workers]);
 
@@ -134,7 +136,12 @@ export function WeeklyPayments() {
     }
   };
 
-  const fetchPaidWorkers = async () => {
+  const fetchPaidWorkers = async (startDate?: string, endDate?: string) => {
+    const currentStartDate = startDate || weekStartDate;
+    const currentEndDate = endDate || weekEndDate;
+    
+    if (!currentStartDate || !currentEndDate) return;
+    
     try {
       // Use existing /payments endpoint and filter on client side
       const response = await fetch(`${API_URL}/payments`, {
@@ -144,11 +151,11 @@ export function WeeklyPayments() {
       });
       if (response.ok) {
         const allPayments: Payment[] = await response.json();
-        // Filter payments for the current week - compare as YYYY-MM-DD strings
+        // Filter payments for the selected week - compare as YYYY-MM-DD strings
         const weekPayments = allPayments.filter(p => {
           const paymentStart = p.weekStartDate ? p.weekStartDate.split('T')[0] : '';
           const paymentEnd = p.weekEndDate ? p.weekEndDate.split('T')[0] : '';
-          return paymentStart === weekStartDate && paymentEnd === weekEndDate;
+          return paymentStart === currentStartDate && paymentEnd === currentEndDate;
         });
         const paidWorkerIds = new Set(weekPayments.map(p => p.workerId));
         setPaidWorkers(paidWorkerIds);
@@ -190,13 +197,22 @@ export function WeeklyPayments() {
       });
 
       if (response.ok) {
+        const data = await response.json();
         toast.success(`Payment of KSh ${Number(paymentAmount).toLocaleString()} recorded for ${worker.workerName}!`, {
           icon: <CheckCircle2 className="w-5 h-5 text-green-500" />
         });
         setPaymentAmount('');
         setSelectedWorker('');
-        // Refresh paid workers list
-        fetchPaidWorkers();
+        
+        // Immediately mark worker as paid in local state
+        const newPaidWorkers = new Set(paidWorkers);
+        newPaidWorkers.add(worker.workerId);
+        setPaidWorkers(newPaidWorkers);
+        
+        // Also refresh from server
+        if (weekStartDate && weekEndDate) {
+          fetchPaidWorkers(weekStartDate, weekEndDate);
+        }
       } else {
         toast.error('Failed to record payment');
       }
